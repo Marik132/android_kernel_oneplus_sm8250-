@@ -12,6 +12,12 @@ jobs:
         with:
           ref: op8t
 
+      # Встановлюємо Python 2, щоб старі скрипти OnePlus (на кшталт gcc-wrapper.py) не видавали помилок синтаксису
+      - name: Set up Python 2.x
+        uses: actions/setup-python@v5
+        with:
+          python-version: '2.x'
+
       - name: Setup Build Environment
         run: |
           sudo apt update
@@ -28,7 +34,7 @@ jobs:
           # 2. Фікс нових опцій ядра (запобігає зависанню збірки)
           make O=out ARCH=arm64 CC=clang olddefconfig
           
-          # 3. Повна збірка ядра за твоєю робочою схемою
+          # 3. Повна збірка ядра
           make -j$(nproc) O=out ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip
 
       - name: Upload Kernel Artifact
