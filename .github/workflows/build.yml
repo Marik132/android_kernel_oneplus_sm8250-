@@ -23,18 +23,11 @@ jobs:
         mkdir -p $GITHUB_WORKSPACE/toolchain
         cd $GITHUB_WORKSPACE/toolchain
         
-        # Завантажуємо офіційну перевірену збірку Clang r416183b direct link
-        curl -LOs https://googlesource.com
+        # Використовуємо стабільне дзеркало prebuilt-компіляторів для GitHub Actions
+        curl -LOs https://github.com
         
-        # Перевірка на випадок порожнього завантаження
-        if [ ! -s clang-r416183b.tar.gz ]; then
-          echo "Помилка: Не вдалося завантажити Clang за першим посиланням. Спроба альтернативного джерела..."
-          rm -f clang-r416183b.tar.gz
-          curl -LOs https://googlesource.com
-        fi
-        
-        tar -xf clang-r416183b.tar.gz
-        rm -f clang-r416183b.tar.gz
+        tar -xf Clang-12.0.5-20210512-r416183b.tar.gz
+        rm -f Clang-12.0.5-20210512-r416183b.tar.gz
 
     - name: Neutralize Broken OnePlus Scripts
       run: |
@@ -47,6 +40,7 @@ jobs:
 
     - name: Build Kernel
       run: |
+        # Враховуємо структуру папок архіву ZyCromerZ (бінарники лежать у bin/)
         export PATH="$GITHUB_WORKSPACE/toolchain/bin:$PATH"
         
         export ARCH=arm64
