@@ -1,0 +1,72 @@
+name: Build OnePlus 8T Clean Kernel
+
+on:
+  workflow_dispatch: # Дозволяє запускати збірку вручну кнопкою
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Kernel Source
+      uses: actions/checkout@v4
+      with:
+        ref: op8t
+        fetch-depth: 1
+
+    - name: Set up Build Environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bc bison build-essential flex git libelf-dev libssl-dev tcl ccache libarchive-tools
+
+    - name: Download Google Clang Toolchain
+      run: |
+        mkdir -p $GITHUB_WORKSPACE/clang
+        # Завантажуємо офіційний Android Clang (r450784d), яким збираються ядра 4.19 під Android 13
+        curl -Lo clang.tar.gz https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r450784d.tar.gz
+        tar -xzf clang.tar.gz -C $GITHUB_WORKSPACE/clang
+        rm clang.tar.gz
+
+    - name: Build Kernel
+      run: |
+        export ARCH=arm64
+        export SUBARCH=arm64
+        export PATH="$GITHUB_WORKSPACE/clang/bin:$PATH"
+        
+        # Налаштування компілятора
+        export CC=clang
+        export LD=ld.lld
+        export AR=llvm-ar
+        export NM=llvm-nm
+        export OBJCOPY=llvm-objcopy
+        export OBJDUMP=llvm-objdump
+        export STRIP=llvm-strip
+        
+        # Генерація конфігу під OnePlus 8T (kebab)
+        make O=out vendor/kebab_defconfig
+        
+        # Компіляція ядра (використовуємо всі потоки сервера)
+        make -j$(nproc --all) O=out \
+          CC=clang \
+          CLANG_TRIPLE=aarch64-linux-gnu- \
+          CROSS_COMPILE=aarch64-linux-gnu-
+
+    - name: Check and Pack Output
+      run: |
+        if [ -f "out/arch/arm64/boot/Image.gz-dtb" ]; then
+          echo "Kernel compiled successfully!"
+          mkdir -p output
+          cp out/arch/arm64/boot/Image.gz-dtb output/Image.gz-dtb
+        elif [ -f "out/arch/arm64/boot/Image.gz" ]; then
+          echo "Kernel compiled successfully (Image.gz)!"
+          mkdir -p output
+          cp out/arch/arm64/boot/Image.gz output/Image.gz
+        else
+          echo "Compilation failed! Core boot files not found."
+          exit 1
+        fi
+
+    - name: Upload Kernel Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: OnePlus-8T-Clean-Kernel
+        path: output/*
