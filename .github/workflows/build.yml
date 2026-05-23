@@ -12,16 +12,15 @@ jobs:
         with:
           ref: op8t
 
-      # Встановлюємо Python 2, щоб старі скрипти OnePlus (на кшталт gcc-wrapper.py) не видавали помилок синтаксису
-      - name: Set up Python 2.x
-        uses: actions/setup-python@v5
-        with:
-          python-version: '2.x'
-
       - name: Setup Build Environment
         run: |
           sudo apt update
           sudo apt install -y bc bison build-essential flex git libssl-dev libelf-dev clang lld llvm libncurses-dev gcc-aarch64-linux-gnu
+
+      - name: Fix Python 3 Syntax in Kernel Scripts
+        run: |
+          # Автоматично додаємо дужки до команди print у скрипті OnePlus, щоб він не падав на Python 3
+          sed -i 's/print "error, forbidden warning:", m.group(2)/print("error, forbidden warning: " + m.group(2))/g' scripts/gcc-wrapper.py
 
       - name: Build Kernel
         run: |
@@ -31,7 +30,7 @@ jobs:
           # 1. Створюємо конфіг саме для нашого OnePlus 8T (kebab)
           make O=out vendor/kebab_defconfig
           
-          # 2. Фікс нових опцій ядра (запобігає зависанню збірки)
+          # 2. Фікс нових опцій ядра
           make O=out ARCH=arm64 CC=clang olddefconfig
           
           # 3. Повна збірка ядра
